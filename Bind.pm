@@ -99,6 +99,14 @@ and conceptually equal to
 
 Note that the module simply replaces B<(?#E<lt>field nameE<gt>> with B<(> and binds the field's name to buffer. It does not check for syntax correctness, so any fancier usage may crash.
 
+
+=head1 INLINE FILTERING
+
+Inline filtering now works with B<embedded syntax>. Matched parts are saved in $_, and you can do some simple transformation within the brackets before they are exported.
+
+  bind($string, qr'# (?#<field_1>{ s/\s+//, $_ }\w+) (?#<field_2>{ $_*= 10, $_ }\d+)\n'm);
+
+
 =cut
 
 package Regexp::Bind;
@@ -107,33 +115,58 @@ use 5.006;
 use Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(bind global_bind bind_array global_bind_array);
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 our $USE_NAMED_VAR = 0;
 use strict;
 no strict 'refs';
 
+sub _get_fields {
+    my @field;
+    while($_[0] =~ s,\(\?#<(\w+?)>,(,o){
+	  push @field, $1;
+    }
+    @field;
+}
+
+sub _get_filters {
+    my @filter;
+    # well, i know, this vulgar pattern doesn't really work for all occasions
+    # i will introduce Text::Balanced with this.
+    while($_[0] =~ s,(\(\?#(?:<(?:\w+?)>))\{(.+?)\},$1,o){
+      push @filter, $2;
+    }
+    (undef, map{eval 'sub { local $_ = shift;'.$_.'};' }@filter);
+}      
+
+use Data::Dumper;
+use B::Deparse;
 sub bind {
     my $string = shift || die "No string input";
     my $regexp = shift || die "No regexp input";
 
-    my @field;
-    while($regexp =~ s,\(\?#<(\w+?)>,(,o){
-      push @field, $1;
-    }
+    my @filter = _get_filters $regexp;
+    my @field = _get_fields $regexp;
     @field = @_ unless @field;
+
 
     $string =~ m/$regexp/;
     my $cnt = 1;
     if($USE_NAMED_VAR){
 	my $pkg = (caller)[0];
 	foreach my $field (@field){
-	    ${"${pkg}::$field"} = ${$cnt++};
+	    my $t = ref($filter[$cnt]) eq 'CODE'? $filter[$cnt]->(${$cnt}) : ${$cnt};
+	    $cnt++;
+	    ${"${pkg}::$field"} = $t;
 	}
     }
     else {
       +{
-	map{ $_ => ${$cnt++} } @field
+	map{ 
+	  my $t = ref($filter[$cnt]) eq 'CODE'? $filter[$cnt]->(${$cnt}) : ${$cnt};
+          $cnt++;
+	  $_ => $t;
+	} @field
        };
     }
 }
@@ -141,6 +174,7 @@ sub bind {
 sub bind_array {
    my $string = shift || die "No string input";
    my $regexp = shift || die "No regexp input";
+   my $cnt = 1;
    [ ($string =~ m/$regexp/) ];
 }
 
@@ -149,10 +183,8 @@ sub global_bind {
     my $string = shift || die "No string input";
     my $regexp = shift || die "No regexp input";
 
-    my @field;
-    while($regexp =~ s,\(\?#<(\w+?)>,(,o){
-      push @field, $1;
-    }
+    my @filter = _get_filters $regexp;
+    my @field = _get_fields $regexp;
     @field = @_ unless @field;
 
     my @bind;
@@ -161,7 +193,12 @@ sub global_bind {
       $cnt = 1;
       push @bind,
 	+{
-	  map{ $_ => ${$cnt++} } @field
+	  map{
+	    my $t = ref($filter[$cnt]) eq 'CODE'
+	      ? $filter[$cnt]->(${$cnt}) : ${$cnt};
+            $cnt++;
+	    $_ => $t;
+	  } @field
 	 };
     }
     wantarray ? @bind : \@bind;
@@ -170,8 +207,9 @@ sub global_bind {
 sub global_bind_array {
    my $string = shift || die "No string input";
    my $regexp = shift || die "No regexp input";
+
    my @bind;
-   push @bind, [ map { ${$_} } 1..$#+ ] while $string =~ m/$regexp/g;
+   push @bind, [ map{${$_}} 1..$#+ ] while $string =~ m/$regexp/g;
    @bind;
 }
 
@@ -188,7 +226,7 @@ You may wanna check test.pl for an example too.
 
 =head1 TO DO
 
-Perhaps, I'll add a 'FOREACH' directive like that in L<Template::Extract>, or implement basic inline buffer filtering, and then you don't need to write m// and s/// plus map() and grep() outside of regexps.
+Perhaps, I'll add a 'FOREACH' directive like that in L<Template::Extract>.
 
 
 =head1 COPYRIGHT

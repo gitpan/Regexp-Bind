@@ -22,7 +22,8 @@ $cnt = 0;
 	   [ qw(quote author from) ],
 	   );
 foreach $template (qr'"(.+?)"\n-(.+?), (.+?)\n's,
-		   qr'"(?#<quote>.+?)"\n-(?#<author>.+?), (?#<from>.+?)\n's){
+		   qr'"(?#<quote>.+?)"\n-(?#<author>.+?), (?#<from>.+?)\n's,
+		   ){
 
 ######################################################################
 # Array binding
@@ -58,3 +59,12 @@ like($from, qr'Tempation');
 
 $cnt++;
 }
+
+
+$Regexp::Bind::USE_NAMED_VAR = 0;
+$template = qr'"(?#<quote>{ s/\s//g, $_ }.+?)"\n-(?#<author>{s/.+/\L$&/,$_}.+?), (?#<from>.+?)\n's;
+
+unlike(bind($quotes, $template)->{quote}, qr'\s');
+like((global_bind($quotes, $template))[2]->{author}, qr'e. v. lucas');
+
+

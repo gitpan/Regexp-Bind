@@ -10,3 +10,6 @@ Revision history for Perl extension Regexp::Bind.
 
 0.03 Tue, 16 Mar 2004 00:13:18 +0800
 	- bind_array() and global_bind_array added.
+
+0.04 Mon, 22 Mar 2004 02:37:26 +0800
+	- basic inline filtering added.
