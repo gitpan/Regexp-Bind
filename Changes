@@ -7,3 +7,6 @@ Revision history for Perl extension Regexp::Bind.
 	- embedded syntax supported
 	- s!global_arraybind!global_bind!g;
 	- original global_bind() deprecated
+
+0.03 Tue, 16 Mar 2004 00:13:18 +0800
+	- bind_array() and global_bind_array added.

@@ -7,12 +7,15 @@ Regexp::Bind - Bind variables to captured buffers
 =head1 SYNOPSIS
 
   use Regexp::Bind qw(
-                      bind
-                      global_bind
+                      bind global_bind
+                      bind_array global_bind_array
                      );
 
   $record = bind($string, $regexp, @fields);
   @record = global_bind($string, $regexp, @fields);
+
+  $record = bind_array($string, $regexp);
+  @record = global_bind_array($string, $regexp);
 
   $record = bind($string, $embedded_regexp);
   @record = global_bind($string, $embedded_egexp);
@@ -20,28 +23,42 @@ Regexp::Bind - Bind variables to captured buffers
 
 =head1 DESCRIPTION
 
-This module is an extension to perl's native regexp function. It binds an anonymous hash or named variables to matched buffers. Both normal regexp syntax and embedded regexp syntax are supported. You can view it as a tiny and petite data extraction system.
+This module is an extension to perl's native regexp function. It binds anonymous hashes or named variables to matched buffers. Both normal regexp syntax and embedded regexp syntax are supported. You can view it as a tiny and petite data extraction system.
 
 =head1 FUNCTIONS
 
-Two functions are exported. They bind the given fields to captured contents, and return an anonymous hash of the fields.
+Two types of function are exported. They bind the given fields to captured contents, and return anonymous hashes/arrayes of the fields.
 
 
 =head2 Match the first occurrence
 
   use Data::Dumper;
 
+=head3 Binding to anonymous hash
+
   $record = bind($string, $regexp, qw(field_1 field_2 field_3));
   print Dumper $record;
 
+=head3 Binding to array
+
+  $record = bind_array($string, $regexp);
+  print $record->[0];
+
 =head2 Do global matching and store matched parts in @record 
+
+=head3 Binding to anonymous hash
 
   @record = global_bind($string, $regexp, qw(field_1 field_2 field_3));
   print Dumper $_ foreach @record;
 
+=head3 Binding to array
+
+  @record = global_bind_array($string, $regexp);
+  print $record[0]->[0];
+
 =head1 NAMED VARIABLE BINDING
 
-To use named variable binding, please set $Regexp::Bind::USE_NAMED_VAR to non-undef, and then matched parts will be bound to named variables while using bind(). It is not supported for global_bind().
+To use named variable binding, please set $Regexp::Bind::USE_NAMED_VAR to non-undef, and then matched parts will be bound to named variables while using bind(). It is not supported for global_bind(), bind_array() and global_bind_array().
 
   $Regexp::Bind::USE_NAMED_VAR = 1;
   bind($string, $regexp, qw(field_1 field_2 field_3));
@@ -52,9 +69,10 @@ To use named variable binding, please set $Regexp::Bind::USE_NAMED_VAR to non-un
 
 Using embedded regexp syntax means you can embed fields right in regexp itself. Its embedded syntax exploits the feature of in-line commenting in regexps.
 
-The module first tries to detect if embedded syntax is used. If detected, then comments are stripped and regexp is turned back to a simple one.
+The module first tries to detect if embedded syntax is used. If detected, then comments are stripped and regexp is turned back into a simple one.
 
-Using embedded syntax, field's name is restricted to B<alphanumerics> only.
+Using embedded syntax, for the sake of simplicity and legibility, field's name is restricted to B<alphanumerics> only. bind_array() and global_bind_array() do not support embedded syntax.
+
 
 Example:
 
@@ -73,18 +91,13 @@ is the same as
 
   bind($string, qr'# (?#<field_1>\w+) (?#<field_2>\d+)\n'm);
 
-or
+and conceptually equal to
 
-  bind($string, qr'# (\w+) (\d+)\n'm);
+  bind($string, qr'# (\w+) (\d+)\n'm, qw(field_1 field_2));
+
 
 
 Note that the module simply replaces B<(?#E<lt>field nameE<gt>> with B<(> and binds the field's name to buffer. It does not check for syntax correctness, so any fancier usage may crash.
-
-=head1 SEE ALSO
-
-For a similar functionality, see L<Regexp::Fields>.
-
-See also test.pl for an example.
 
 =cut
 
@@ -93,12 +106,13 @@ use 5.006;
 
 use Exporter;
 our @ISA = qw(Exporter);
-our @EXPORT_OK = qw(bind global_bind global_bind);
-our $VERSION = '0.02';
+our @EXPORT_OK = qw(bind global_bind bind_array global_bind_array);
+our $VERSION = '0.03';
 
 our $USE_NAMED_VAR = 0;
 use strict;
 no strict 'refs';
+
 sub bind {
     my $string = shift || die "No string input";
     my $regexp = shift || die "No regexp input";
@@ -124,6 +138,12 @@ sub bind {
     }
 }
 
+sub bind_array {
+   my $string = shift || die "No string input";
+   my $regexp = shift || die "No regexp input";
+   [ ($string =~ m/$regexp/) ];
+}
+
 
 sub global_bind {
     my $string = shift || die "No string input";
@@ -147,9 +167,28 @@ sub global_bind {
     wantarray ? @bind : \@bind;
 }
 
+sub global_bind_array {
+   my $string = shift || die "No string input";
+   my $regexp = shift || die "No regexp input";
+   my @bind;
+   push @bind, [ map { ${$_} } 1..$#+ ] while $string =~ m/$regexp/g;
+   @bind;
+}
+
 1;
 __END__
 
+=head1 SEE ALSO
+
+For a similar functionality, see L<Regexp::Fields>.
+
+And see L<Template::Extract> and L<WWW::Extractor> also. They are similar projects with prettier templates instead of low-level regexps.
+
+You may wanna check test.pl for an example too.
+
+=head1 TO DO
+
+Perhaps, I'll add a 'FOREACH' directive like that in L<Template::Extract>, or implement basic inline buffer filtering, and then you don't need to write m// and s/// plus map() and grep() outside of regexps.
 
 
 =head1 COPYRIGHT

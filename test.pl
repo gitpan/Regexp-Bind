@@ -1,7 +1,10 @@
 use Test::More qw(no_plan);
 use ExtUtils::testlib;
 use Data::Dumper;
-use Regexp::Bind qw(bind global_bind);
+use Regexp::Bind qw(
+		    bind global_bind
+		    bind_array global_bind_array
+		    );
 
 
 $quotes =<<'.';
@@ -20,6 +23,15 @@ $cnt = 0;
 	   );
 foreach $template (qr'"(.+?)"\n-(.+?), (.+?)\n's,
 		   qr'"(?#<quote>.+?)"\n-(?#<author>.+?), (?#<from>.+?)\n's){
+
+######################################################################
+# Array binding
+######################################################################
+
+if($cnt==0){
+    like((bind_array($quotes, $template))->[1], qr'M. Cior');
+    like((global_bind_array($quotes, $template))[2]->[2], qr'365');
+}
 
 ######################################################################
 # Use anonymous hash
