@@ -1,7 +1,7 @@
 use Test::More qw(no_plan);
 use ExtUtils::testlib;
 use Data::Dumper;
-use Regexp::Bind qw(bind global_bind global_arraybind);
+use Regexp::Bind qw(bind global_bind);
 
 
 $quotes =<<'.';
@@ -13,33 +13,36 @@ $quotes =<<'.';
 -E. V. Lucas, 365 Days and One More
 .
 
+
+$cnt = 0;
+@fields = (
+	   [ qw(quote author from) ],
+	   );
+foreach $template (qr'"(.+?)"\n-(.+?), (.+?)\n's,
+		   qr'"(?#<quote>.+?)"\n-(?#<author>.+?), (?#<from>.+?)\n's){
+
 ######################################################################
+# Use anonymous hash
+######################################################################		   
+$Regexp::Bind::USE_NAMED_VAR = 0;
 
-$template = qr'"(.+?)"\n-(.+?), (.+?)\n's;
-
-$record = bind($quotes, $template, qw(quote author from));
+$record = bind($quotes, $template, @{$fields[$cnt]});
 is($record->{author}, 'E. M. Cioran');
 
-@record = global_arraybind($quotes, $template, qw(quote author from));
+@record = global_bind($quotes, $template, @{$fields[$cnt]});
 is($record[0]->{from}, 'The Tempation to Exist');
 is($record[1]->{author}, 'Erich Fromm');
 like($record[2]->{quote}, qr'adventurous');
 
-while($record = global_bind($quotes, $template, qw(quote author from))){
-    like($record->{quote}, qr'dream');
-}
 
 ######################################################################
-# use named variables
+# Use named variables
 ######################################################################
 $Regexp::Bind::USE_NAMED_VAR = 1;
-bind($quotes, $template, qw(quote author from));
+bind($quotes, $template, @{$fields[$cnt]});
 like($quote, qr'dream');
 like($author, qr'Cioran');
 like($from, qr'Tempation');
 
-while(global_bind($quotes, $template, qw(quote author from))){
-    like($quote, qr'dream');
-    like($author, qr'E');
-    like($from, qr'a');
+$cnt++;
 }

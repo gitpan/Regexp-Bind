@@ -8,18 +8,21 @@ SYNOPSIS
          use Regexp::Bind qw(
                              bind
                              global_bind
-                             global_arraybind
                             );
 
          $record = bind($string, $regexp, @fields);
-         $record = global_bind($string, $regexp, @fields);
-         @record = global_arraybind($string, $regexp, @fields);
+         @record = global_bind($string, $regexp, @fields);
+
+         $record = bind($string, $embedded_regexp);
+         @record = global_bind($string, $embedded_egexp);
 
 DESCRIPTION
        This module is an extension to perl's native regexp func-
-       tion. It binds matched variables to an anonymous hash or
-       named variables. You can view it as a tiny and petite tem-
-       plate extraction system.
+       tion. It binds an anonymous hash or named variables to
+       matched buffers. Both normal regexp syntax and embedded
+       regexp syntax are supported. You can view it as a tiny and
+       petite data extraction system.
+
 
 
 INSTALLATION
