@@ -14,21 +14,33 @@ Regexp::Bind - Bind variables to captured buffers
   $record = bind($string, $regexp, @fields);
   @record = global_bind($string, $regexp, @fields);
 
+  $record = bind(\$string, $regexp, @fields);
+  @record = global_bind(\$string, $regexp, @fields);
+
   $record = bind_array($string, $regexp);
   @record = global_bind_array($string, $regexp);
 
-  $record = bind($string, $embedded_regexp);
-  @record = global_bind($string, $embedded_egexp);
+  $record = bind_array(\$string, $regexp);
+  @record = global_bind_array(\$string, $regexp);
+
+  $record = bind(\$string, $embedded_regexp);
+  @record = global_bind(\$string, $embedded_egexp);
 
 
 =head1 DESCRIPTION
 
-This module is an extension to perl's native regexp function. It binds anonymous hashes or named variables to matched buffers. Both normal regexp syntax and embedded regexp syntax are supported. You can view it as a tiny and petite data extraction system.
+This module is an extension to perl's native regexp function. It binds
+anonymous hashes or named variables to matched buffers. Both normal
+regexp syntax and embedded regexp syntax are supported. You can view
+it as a tiny and petite data extraction system.
 
 =head1 FUNCTIONS
 
-Two types of function are exported. They bind the given fields to captured contents, and return anonymous hashes/arrayes of the fields.
+Two types of function are exported. They bind the given fields to
+captured contents, and return anonymous hashes/arrayes of the fields.
 
+In the following example, you can pass in either a string or a
+string-reference.
 
 =head2 Match the first occurrence
 
@@ -67,11 +79,17 @@ To use named variable binding, please set $Regexp::Bind::USE_NAMED_VAR to non-un
 
 =head1 EMBEDDED REGEXP
 
-Using embedded regexp syntax means you can embed fields right in regexp itself. Its embedded syntax exploits the feature of in-line commenting in regexps.
+Using embedded regexp syntax means you can embed fields right in
+regexp itself. Its embedded syntax exploits the feature of in-line
+commenting in regexps.
 
-The module first tries to detect if embedded syntax is used. If detected, then comments are stripped and regexp is turned back into a simple one.
+The module first tries to detect if embedded syntax is used. If
+detected, then comments are stripped and regexp is turned back into a
+simple one.
 
-Using embedded syntax, for the sake of simplicity and legibility, field's name is restricted to B<alphanumerics> only. bind_array() and global_bind_array() do not support embedded syntax.
+Using embedded syntax, for the sake of simplicity and legibility,
+field's name is restricted to B<alphanumerics> only. bind_array() and
+global_bind_array() do not support embedded syntax.
 
 
 Example:
@@ -97,12 +115,16 @@ and conceptually equal to
 
 
 
-Note that the module simply replaces B<(?#E<lt>field nameE<gt>> with B<(> and binds the field's name to buffer. It does not check for syntax correctness, so any fancier usage may crash.
+Note that the module simply replaces B<(?#E<lt>field nameE<gt>> with
+B<(> and binds the field's name to buffer. It does not check for
+syntax correctness, so any fancier usage may crash.
 
 
 =head1 INLINE FILTERING
 
-Inline filtering now works with B<embedded syntax>. Matched parts are saved in $_, and you can do some simple transformation within the brackets before they are exported.
+Inline filtering now works with B<embedded syntax>. Matched parts are
+saved in $_, and you can do some simple transformation within the
+brackets before they are exported.
 
   bind($string, qr'# (?#<field_1>{ s/\s+//, $_ }\w+) (?#<field_2>{ $_*= 10, $_ }\d+)\n'm);
 
@@ -110,12 +132,11 @@ Inline filtering now works with B<embedded syntax>. Matched parts are saved in $
 =cut
 
 package Regexp::Bind;
-use 5.006;
 
 use Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(bind global_bind bind_array global_bind_array);
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 our $USE_NAMED_VAR = 0;
 use strict;
@@ -142,7 +163,7 @@ sub _get_filters {
 use Data::Dumper;
 use B::Deparse;
 sub bind {
-    my $string = shift || die "No string input";
+    my $string = (ref($_[0]) eq 'SCALAR' ? ${shift()} : shift) || die "No string input";
     my $regexp = shift || die "No regexp input";
 
     my @filter = _get_filters $regexp;
@@ -172,7 +193,7 @@ sub bind {
 }
 
 sub bind_array {
-   my $string = shift || die "No string input";
+   my $string = (ref($_[0]) eq 'SCALAR' ? ${shift()} : shift) || die "No string input";
    my $regexp = shift || die "No regexp input";
    my $cnt = 1;
    [ ($string =~ m/$regexp/) ];
@@ -180,7 +201,7 @@ sub bind_array {
 
 
 sub global_bind {
-    my $string = shift || die "No string input";
+    my $string = (ref($_[0]) eq 'SCALAR' ? ${shift()} : shift) || die "No string input";
     my $regexp = shift || die "No regexp input";
 
     my @filter = _get_filters $regexp;
@@ -205,7 +226,7 @@ sub global_bind {
 }
 
 sub global_bind_array {
-   my $string = shift || die "No string input";
+   my $string = (ref($_[0]) eq 'SCALAR' ? ${shift()} : shift) || die "No string input";
    my $regexp = shift || die "No regexp input";
 
    my @bind;

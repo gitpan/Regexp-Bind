@@ -1,4 +1,5 @@
-use Test::More qw(no_plan);
+#use Test::More qw(no_plan);
+use Test::More tests => 36;
 use ExtUtils::testlib;
 use Data::Dumper;
 use Regexp::Bind qw(
@@ -32,6 +33,8 @@ foreach $template (qr'"(.+?)"\n-(.+?), (.+?)\n's,
 if($cnt==0){
     like((bind_array($quotes, $template))->[1], qr'M. Cior');
     like((global_bind_array($quotes, $template))[2]->[2], qr'365');
+    like((bind_array(\$quotes, $template))->[1], qr'M. Cior');
+    like((global_bind_array(\$quotes, $template))[2]->[2], qr'365');
 }
 
 ######################################################################
@@ -42,7 +45,15 @@ $Regexp::Bind::USE_NAMED_VAR = 0;
 $record = bind($quotes, $template, @{$fields[$cnt]});
 is($record->{author}, 'E. M. Cioran');
 
+$record = bind(\$quotes, $template, @{$fields[$cnt]});
+is($record->{author}, 'E. M. Cioran');
+
 @record = global_bind($quotes, $template, @{$fields[$cnt]});
+is($record[0]->{from}, 'The Tempation to Exist');
+is($record[1]->{author}, 'Erich Fromm');
+like($record[2]->{quote}, qr'adventurous');
+
+@record = global_bind(\$quotes, $template, @{$fields[$cnt]});
 is($record[0]->{from}, 'The Tempation to Exist');
 is($record[1]->{author}, 'Erich Fromm');
 like($record[2]->{quote}, qr'adventurous');
@@ -57,6 +68,11 @@ like($quote, qr'dream');
 like($author, qr'Cioran');
 like($from, qr'Tempation');
 
+bind(\$quotes, $template, @{$fields[$cnt]});
+like($quote, qr'dream');
+like($author, qr'Cioran');
+like($from, qr'Tempation');
+
 $cnt++;
 }
 
@@ -66,5 +82,8 @@ $template = qr'"(?#<quote>{ s/\s//g, $_ }.+?)"\n-(?#<author>{s/.+/\L$&/,$_}.+?),
 
 unlike(bind($quotes, $template)->{quote}, qr'\s');
 like((global_bind($quotes, $template))[2]->{author}, qr'e. v. lucas');
+
+unlike(bind(\$quotes, $template)->{quote}, qr'\s');
+like((global_bind(\$quotes, $template))[2]->{author}, qr'e. v. lucas');
 
 

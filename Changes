@@ -13,3 +13,6 @@ Revision history for Perl extension Regexp::Bind.
 
 0.04 Mon, 22 Mar 2004 02:37:26 +0800
 	- basic inline filtering added.
+
+0.05 Mon, 04 Oct 2004 11:55:19 +0800
+	- Now, string-refs works with Regexp::Bind
